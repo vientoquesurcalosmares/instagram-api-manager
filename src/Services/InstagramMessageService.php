@@ -24,8 +24,8 @@ class InstagramMessageService
     {
         $this->apiClient = new ApiClient(
             config('instagram.graph_base_url', 'https://graph.facebook.com'),
-            config('instagram.api_version', 'v19.0'),
-            (int) config('instagram.timeout', 30)
+            config('instagram.api.version', 'v19.0'),
+            (int) config('instagram.api.timeout', 30)
         );
     }
 
@@ -51,7 +51,7 @@ class InstagramMessageService
     {
         try {
             Log::channel('instagram')->debug('Webhook payload received', ['payload' => $payload]);
-            
+
             foreach ($payload['entry'] ?? [] as $entry) {
                 foreach ($entry['messaging'] ?? [] as $messaging) {
                     Log::channel('instagram')->debug('Processing messaging entry', ['messaging' => $messaging]);
@@ -130,12 +130,12 @@ class InstagramMessageService
                 'action' => $reaction['action'] ?? 'react',
                 'timestamp' => now()
             ];
-            
+
             $reactedMessage->update([
                 'reactions' => $currentReactions
             ]);
         }
-        
+
         Log::info('Instagram reaction processed', [
             'conversation_id' => $conversation->id,
             'reaction' => $reaction
@@ -174,7 +174,7 @@ class InstagramMessageService
             $senderId = $senderId['id'] ?? (string) $senderId;
         }
         $senderId = (string) $senderId;
-        
+
         if (is_array($recipientId)) {
             $recipientId = $recipientId['id'] ?? (string) $recipientId;
         }
@@ -201,7 +201,7 @@ class InstagramMessageService
                 ]);
                 return;
             }
-            
+
             // Usar el instagram_business_account_id correcto para la conversación
             $conversation = $this->findOrCreateConversation($businessAccount->instagram_business_account_id, $senderId);
 
@@ -218,17 +218,17 @@ class InstagramMessageService
                 // Verificar si es una default action de plantilla genérica
                 if (isset($messageData['message']['quick_reply'])) {
                     // Es un quick reply, ya se procesa en processIncomingMessage
-                } 
-                
+                }
+
                 // SOLO actualizar contacto para mensajes entrantes (no ecos)
                 if (!isset($messageData['message']['is_echo']) || $messageData['message']['is_echo'] !== true) {
                     $this->updateContact($senderId, $businessAccount->instagram_business_account_id, $messageData);
                 }
             } elseif (isset($messageData['postback'])) {
                 $this->processPostback(
-                    $conversation, 
-                    $messageData['postback'], 
-                    $senderId, 
+                    $conversation,
+                    $messageData['postback'],
+                    $senderId,
                     $businessAccount->instagram_business_account_id,
                     $messageData['timestamp'] ?? null // Pasar el timestamp
                 );
@@ -253,7 +253,7 @@ class InstagramMessageService
             }else {
                 Log::warning('Unknown message type received', $messageData);
             }
-            
+
         } catch (Exception $e) {
             Log::error('Error processing Instagram message:', [
                 'error' => $e->getMessage(),
@@ -290,8 +290,8 @@ class InstagramMessageService
             'json' => $message,
             'status' => 'received',
             'created_time' => now(),
-            'sent_at' => isset($message['timestamp']) ? 
-                date('Y-m-d H:i:s', $message['timestamp'] / 1000) : 
+            'sent_at' => isset($message['timestamp']) ?
+                date('Y-m-d H:i:s', $message['timestamp'] / 1000) :
                 now()
         ];
 
@@ -330,7 +330,7 @@ class InstagramMessageService
         InstagramModelResolver::instagram_message()->create($messageData);
         Log::info('Mensaje entrante guardado', ['message_id' => $messageId, 'type' => $messageType]);
     }
-    
+
     // Añadir método para procesar ediciones de mensajes
     protected function processMessageEdit(Model $conversation, array $messageEdit, string $senderId, string $recipientId): void
     {
@@ -338,7 +338,7 @@ class InstagramMessageService
             'conversation_id' => $conversation->id,
             'message_edit' => $messageEdit
         ]);
-        
+
         // Opcional: puedes implementar lógica para actualizar mensajes editados
     }
     protected function processOptin(Model $conversation, array $optin, string $senderId, string $recipientId): void
@@ -371,7 +371,7 @@ class InstagramMessageService
             $ref = $referral['ref'] ?? null;
             $source = $referral['source'] ?? null;
             $type = $referral['type'] ?? null;
-            
+
             // Guardar información del referral en la conversación
             $conversation->update([
                 'last_referral' => $ref,
@@ -379,7 +379,7 @@ class InstagramMessageService
                 'referral_type' => $type,
                 'referral_timestamp' => now()
             ]);
-            
+
             // Crear un registro detallado del referral
             InstagramModelResolver::instagram_referral()->create([
                 'conversation_id' => $conversation->id,
@@ -390,14 +390,14 @@ class InstagramMessageService
                 'type' => $type,
                 'processed_at' => now()
             ]);
-            
+
             Log::info('ig.me referral processed', [
                 'conversation_id' => $conversation->id,
                 'ref' => $ref,
                 'source' => $source,
                 'type' => $type
             ]);
-            
+
         } catch (Exception $e) {
             Log::error('Error processing ig.me referral:', [
                 'error' => $e->getMessage(),
@@ -414,13 +414,13 @@ class InstagramMessageService
                 ->where('status', 'sent')
                 ->update(['status' => 'read', 'read_at' => now()]);
         }
-        
+
         // También puedes procesar el mid específico si está disponible
         if (isset($read['mid'])) {
             InstagramModelResolver::instagram_message()->where('message_id', $read['mid'])
                 ->update(['status' => 'read', 'read_at' => now()]);
         }
-        
+
         Log::info('Instagram read receipt processed', [
             'conversation_id' => $conversation->id,
             'read' => $read
@@ -432,12 +432,12 @@ class InstagramMessageService
         if (isset($message['quick_reply'])) {
             return 'quick_reply';
         }
-        
+
         if (isset($message['attachments'])) {
             $attachment = $message['attachments'][0] ?? [];
             return $attachment['type'] ?? 'text';
         }
-        
+
         return 'text';
     }
 
@@ -445,19 +445,19 @@ class InstagramMessageService
     {
         try {
             $profile = $messageData['sender']['profile'] ?? [];
-            
+
             Log::debug('Intentando actualizar contacto', [
                 'user_id' => $instagramUserId,
                 'business_account_id' => $businessAccountId,
                 'has_profile_data' => !empty($profile)
             ]);
-            
+
             // Si no hay información de perfil en el webhook, intentar obtenerla via API
             if (empty($profile)) {
                 Log::info('No hay información de perfil en el webhook, intentando obtener via API');
                 $profile = $this->getUserProfileViaApi($instagramUserId, $businessAccountId);
             }
-            
+
             // Crear o actualizar el contacto incluso si no tenemos información completa
             InstagramModelResolver::instagram_contact()->updateOrCreate(
                 [
@@ -471,7 +471,7 @@ class InstagramMessageService
                     'last_interaction' => now(),
                 ]
             );
-            
+
             Log::info('Contacto actualizado/creado exitosamente', [
                 'user_id' => $instagramUserId,
                 'business_account_id' => $businessAccountId
@@ -510,7 +510,7 @@ class InstagramMessageService
     {
         $this->validateCredentials();
 
-        $conversation = $conversationId ? 
+        $conversation = $conversationId ?
             InstagramModelResolver::instagram_conversation()->find($conversationId) :
             $this->findOrCreateConversation($this->instagramUserId, $recipientId);
 
@@ -764,7 +764,7 @@ class InstagramMessageService
     public function sendMessageWithTag(string $recipientId, string $text, string $tag, ?string $conversationId = null): ?array
     {
         $allowedTags = ['ISSUE_RESOLUTION', 'APPOINTMENT_UPDATE', 'SHIPPING_UPDATE', 'RESERVATION_UPDATE', 'GAME_EVENT', 'TRANSPORTATION_UPDATE', 'FEATURE_FUNCTIONALITY_UPDATE', 'TICKET_UPDATE'];
-        
+
         if (!in_array($tag, $allowedTags)) {
             throw new Exception("Etiqueta no permitida: $tag");
         }
@@ -899,24 +899,24 @@ class InstagramMessageService
     public function syncConversations(string $accessToken, string $instagramUserId): void
     {
         $this->validateCredentials();
-        
+
         try {
             $conversations = $this->getConversations();
-            
+
             foreach ($conversations['data'] ?? [] as $conversationData) {
                 $conversation = InstagramModelResolver::instagram_conversation()->updateOrCreate(
                     ['conversation_id' => $conversationData['id']],
                     [
                         'instagram_business_account_id' => $instagramUserId,
                         'senders' => $conversationData['senders']['data'] ?? [],
-                        'updated_time' => isset($conversationData['updated_time']) ? 
-                            date('Y-m-d H:i:s', strtotime($conversationData['updated_time'])) : 
+                        'updated_time' => isset($conversationData['updated_time']) ?
+                            date('Y-m-d H:i:s', strtotime($conversationData['updated_time'])) :
                             null,
                         'unread_count' => $conversationData['unread_count'] ?? 0,
                         'is_archived' => $conversationData['is_archived'] ?? false
                     ]
                 );
-                
+
                 $this->syncConversationMessages($conversation, $accessToken);
             }
         } catch (Exception $e) {
@@ -931,7 +931,7 @@ class InstagramMessageService
     {
         try {
             $messages = $this->getMessages($conversation->conversation_id);
-            
+
             foreach ($messages['data'] ?? [] as $messageData) {
                 InstagramModelResolver::instagram_message()->updateOrCreate(
                     ['message_id' => $messageData['id']],
@@ -944,19 +944,19 @@ class InstagramMessageService
                         'message_content' => $messageData['message'] ?? null,
                         'attachments' => $messageData['attachments']['data'] ?? [],
                         'status' => 'received',
-                        'created_time' => isset($messageData['created_time']) ? 
-                            date('Y-m-d H:i:s', strtotime($messageData['created_time'])) : 
+                        'created_time' => isset($messageData['created_time']) ?
+                            date('Y-m-d H:i:s', strtotime($messageData['created_time'])) :
                             null,
                         'json_content' => $messageData
                     ]
                 );
             }
-            
+
             if (!empty($messages['data'])) {
                 $lastMessage = end($messages['data']);
                 $conversation->update([
-                    'last_message_at' => isset($lastMessage['created_time']) ? 
-                        date('Y-m-d H:i:s', strtotime($lastMessage['created_time'])) : 
+                    'last_message_at' => isset($lastMessage['created_time']) ?
+                        date('Y-m-d H:i:s', strtotime($lastMessage['created_time'])) :
                         now()
                 ]);
             }
@@ -973,10 +973,10 @@ class InstagramMessageService
      */
     protected function determineMessageMethod(array $messageData, string $businessAccountId): string
     {
-        $senderId = is_array($messageData['from']) ? 
-            ($messageData['from']['id'] ?? null) : 
+        $senderId = is_array($messageData['from']) ?
+            ($messageData['from']['id'] ?? null) :
             $messageData['from'];
-        
+
         return $senderId === $businessAccountId ? 'outgoing' : 'incoming';
     }
 
@@ -989,7 +989,7 @@ class InstagramMessageService
             $attachment = $messageData['attachments']['data'][0];
             return $attachment['type'] ?? 'text';
         }
-        
+
         return 'text';
     }
 
@@ -1006,13 +1006,13 @@ class InstagramMessageService
                 Log::warning('No se puede obtener perfil via API: falta access token o cuenta no encontrada');
                 return [];
             }
-            
+
             // Verificar que la cuenta tenga el permiso necesario
             if (!app(InstagramAccountService::class)->hasPermission($businessAccount, 'instagram_business_basic')) {
                 Log::warning('No se puede obtener perfil via API: falta permiso instagram_business_basic');
                 return [];
             }
-            
+
             // Usar el endpoint correcto según la documentación de Instagram
             // https://graph.instagram.com/{user-id}?fields={fields}&access_token={access-token}
             $response = $this->apiClient->request(
@@ -1025,9 +1025,9 @@ class InstagramMessageService
                     'fields' => 'username,name,profile_pic,follower_count,is_user_follow_business,is_business_follow_user,is_verified_user'
                 ]
             );
-            
+
             Log::debug('Respuesta de API para perfil de usuario:', ['response' => $response]);
-            
+
             return [
                 'username' => $response['username'] ?? null,
                 'name' => $response['name'] ?? null,
@@ -1052,7 +1052,7 @@ class InstagramMessageService
     {
         // Validar quick replies
         $this->validateQuickReplies($quickReplies);
-        
+
         $payload = [
             'recipient' => [
                 'id' => $recipientId
@@ -1075,25 +1075,25 @@ class InstagramMessageService
         if (count($quickReplies) > 13) {
             throw new Exception('Máximo 13 quick replies permitidos');
         }
-        
+
         foreach ($quickReplies as $quickReply) {
             if (!isset($quickReply['content_type']) || $quickReply['content_type'] !== 'text') {
                 throw new Exception('Quick replies solo soportan content_type: text');
             }
-            
+
             if (!isset($quickReply['title']) || empty($quickReply['title'])) {
                 throw new Exception('Cada quick reply debe tener un título');
             }
-            
+
             if (strlen($quickReply['title']) > 20) {
                 throw new Exception('El título del quick reply no puede exceder 20 caracteres');
             }
-            
+
             if (!isset($quickReply['payload']) || empty($quickReply['payload'])) {
                 throw new Exception('Cada quick reply debe tener un payload');
             }
         }
-        
+
         return true;
     }
 
@@ -1104,7 +1104,7 @@ class InstagramMessageService
     {
         // Validar elementos de la plantilla
         $this->validateGenericTemplateElements($elements);
-        
+
         $payload = [
             'recipient' => [
                 'id' => $recipientId
@@ -1131,46 +1131,46 @@ class InstagramMessageService
         if (count($elements) > 10) {
             throw new Exception('Máximo 10 elementos permitidos en la plantilla genérica');
         }
-        
+
         foreach ($elements as $element) {
             if (!isset($element['title']) || empty($element['title'])) {
                 throw new Exception('Cada elemento debe tener un título');
             }
-            
+
             if (strlen($element['title']) > 80) {
                 throw new Exception('El título no puede exceder 80 caracteres');
             }
-            
+
             if (isset($element['subtitle']) && strlen($element['subtitle']) > 80) {
                 throw new Exception('El subtítulo no puede exceder 80 caracteres');
             }
-            
+
             // Validar botones si existen
             if (isset($element['buttons'])) {
                 if (count($element['buttons']) > 3) {
                     throw new Exception('Máximo 3 botones por elemento');
                 }
-                
+
                 foreach ($element['buttons'] as $button) {
                     if (!isset($button['type']) || !in_array($button['type'], ['web_url', 'postback'])) {
                         throw new Exception('Tipo de botón no válido. Solo se permiten web_url y postback');
                     }
-                    
+
                     if (!isset($button['title']) || empty($button['title'])) {
                         throw new Exception('Cada botón debe tener un título');
                     }
-                    
+
                     if ($button['type'] == 'web_url' && !isset($button['url'])) {
                         throw new Exception('Los botones web_url requieren una URL');
                     }
-                    
+
                     if ($button['type'] == 'postback' && !isset($button['payload'])) {
                         throw new Exception('Los botones postback requieren un payload');
                     }
                 }
             }
         }
-        
+
         return true;
     }
 
@@ -1185,7 +1185,7 @@ class InstagramMessageService
 
         try {
             $businessAccount = $conversation->instagramBusinessAccount;
-            
+
             if (!$businessAccount) {
                 Log::error('No se pudo encontrar la cuenta de negocio para manejar el postback');
                 return;
@@ -1193,7 +1193,7 @@ class InstagramMessageService
 
             // Registrar el postback en la base de datos para su posterior procesamiento
             $this->logPostbackInteraction($payload, $conversation, $senderId, $recipientId);
-            
+
             // Aquí podrías integrar con un sistema de automatización externo
             // Por ahora, solo registramos la interacción
             Log::info('Postback recibido y registrado', [
@@ -1238,7 +1238,7 @@ class InstagramMessageService
                 'status' => 'processed',
                 'created_time' => now()
             ]);
-            
+
             // También podrías actualizar la conversación para indicar la última interacción
             $conversation->update([
                 'last_interaction_at' => now(),
@@ -1246,7 +1246,7 @@ class InstagramMessageService
                 'last_interaction_payload' => $payload,
                 'updated_time' => now()
             ]);
-            
+
         } catch (Exception $e) {
             Log::error('Error registrando interacción de postback:', [
                 'error' => $e->getMessage(),
@@ -1262,7 +1262,7 @@ class InstagramMessageService
     {
         // Validar botones
         $this->validateButtonTemplate($text, $buttons);
-        
+
         $payload = [
             'recipient' => [
                 'id' => $recipientId
@@ -1291,29 +1291,29 @@ class InstagramMessageService
         if (empty($text)) {
             throw new Exception('El texto de la plantilla de botones no puede estar vacío');
         }
-        
+
         if (strlen($text) > 640) {
             throw new Exception('El texto de la plantilla de botones no puede exceder 640 caracteres');
         }
-        
+
         // Validar botones
         if (count($buttons) < 1 || count($buttons) > 3) {
             throw new Exception('Debe haber entre 1 y 3 botones');
         }
-        
+
         foreach ($buttons as $button) {
             if (!isset($button['type']) || !in_array($button['type'], ['web_url', 'postback'])) {
                 throw new Exception('Tipo de botón no válido. Solo se permiten web_url y postback');
             }
-            
+
             if (!isset($button['title']) || empty($button['title'])) {
                 throw new Exception('Cada botón debe tener un título');
             }
-            
+
             if (strlen($button['title']) > 20) {
                 throw new Exception('El título del botón no puede exceder 20 caracteres');
             }
-            
+
             if ($button['type'] == 'web_url') {
                 if (!isset($button['url']) || empty($button['url'])) {
                     throw new Exception('Los botones web_url requieren una URL');
@@ -1324,7 +1324,7 @@ class InstagramMessageService
                 }
             }
         }
-        
+
         return true;
     }
 }

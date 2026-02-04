@@ -16,8 +16,8 @@ class InstagramPersistentMenuService
     {
         $this->apiClient = new ApiClient(
             config('instagram.graph_base_url', 'https://graph.facebook.com'),
-            config('instagram.api_version', 'v19.0'),
-            (int) config('instagram.timeout', 30)
+            config('instagram.api.version', 'v19.0'),
+            (int) config('instagram.api.timeout', 30)
         );
     }
 
