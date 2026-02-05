@@ -36,7 +36,7 @@ class InstagramWebhookController extends Controller
     {
         $challenge = $request->get('hub_challenge');
         $verifyToken = $request->get('hub_verify_token');
-        $expectedToken = config('instagram.api.webhook_verify_token');
+        $expectedToken = config('instagram.api.webhook.verify_token');
 
         if ($verifyToken === $expectedToken && $challenge) {
             Log::info('Instagram webhook verified successfully');
