@@ -21,9 +21,9 @@ class InstagramMessageService
     {
         // Cliente principal para mensajería (Graph API de Facebook)
         $this->apiClient = new ApiClient(
-            config('instagram.graph_base_url', 'https://graph.facebook.com'),
-            config('instagram.api_version', 'v23.0'),
-            (int) config('instagram.timeout', 30)
+            config('instagram.api.graph_base_url', 'https://graph.facebook.com'),
+            config('instagram.api.version', 'v23.0'),
+            (int) config('instagram.api.timeout', 30)
         );
 
         // Inyectamos el servicio de cuentas para refrescar tokens
@@ -504,13 +504,13 @@ class InstagramMessageService
                     return [];
                 }
 
-                $baseUrl = config('instagram.graph_base_url', 'https://graph.instagram.com');
-                $version = config('instagram.api_version', 'v19.0');
+                $baseUrl = config('instagram.api.graph_base_url', 'https://graph.instagram.com');
+                $version = config('instagram.api.version', 'v19.0');
 
                 $basicClient = new ApiClient(
                     $baseUrl,
                     $version,
-                    (int) config('instagram.timeout', 30)
+                    (int) config('instagram.api.timeout', 30)
                 );
 
                 $fields = 'id,username,name,profile_pic,follower_count,is_verified_user,is_user_follow_business,is_business_follow_user';

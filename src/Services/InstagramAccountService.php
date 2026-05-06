@@ -18,9 +18,9 @@ class InstagramAccountService
     public function __construct()
     {
         $this->apiClient = new ApiClient(
-            config('instagram.graph_base_url', 'https://graph.instagram.com'),
-            config('instagram.api_version', 'v19.0'),
-            (int) config('instagram.timeout', 30)
+            config('instagram.api.graph_base_url', 'https://graph.instagram.com'),
+            config('instagram.api.version', 'v19.0'),
+            (int) config('instagram.api.timeout', 30)
         );
     }
 
@@ -140,8 +140,8 @@ class InstagramAccountService
         ],
         ?string $state = null
     ): string {
-        $clientId = config('instagram.client_id');
-        $redirectUri = config('instagram.redirect_uri') ?: route('instagram.auth.callback');
+        $clientId = config('instagram.meta_auth.client_id');
+        $redirectUri = config('instagram.meta_auth.redirect_uri') ?: route('instagram.auth.callback');
         $scope = implode(',', $scopes);
         $state = $state ?? bin2hex(random_bytes(20));
 
@@ -191,9 +191,9 @@ class InstagramAccountService
         try {
             // Crear cliente temporal para OAuth de Instagram (sin versión)
             $oauthClient = new ApiClient(
-                config('instagram.oauth_base_url', 'https://api.instagram.com'),
+                config('instagram.api.oauth_base_url', 'https://api.instagram.com'),
                 '', // Sin versión para endpoints de OAuth
-                (int) config('instagram.timeout', 30)
+                (int) config('instagram.api.timeout', 30)
             );
 
             // Intercambiar código por token de acceso - USAR form_params (x-www-form-urlencoded)
@@ -203,10 +203,10 @@ class InstagramAccountService
                 [], // Sin parámetros en la URL
                 [ // Datos en el cuerpo como form_params (x-www-form-urlencoded)
                     'form_params' => [
-                        'client_id' => config('instagram.client_id'),
-                        'client_secret' => config('instagram.client_secret'),
+                        'client_id' => config('instagram.meta_auth.client_id'),
+                        'client_secret' => config('instagram.meta_auth.client_secret'),
                         'grant_type' => 'authorization_code',
-                        'redirect_uri' => config('instagram.redirect_uri') ?: route('instagram.auth.callback'),
+                        'redirect_uri' => config('instagram.meta_auth.redirect_uri') ?: route('instagram.auth.callback'),
                         'code' => $code,
                     ]
                 ]
@@ -333,9 +333,9 @@ class InstagramAccountService
         try {
             // Crear cliente para endpoint de exchange (según documentación)
             $exchangeClient = new ApiClient(
-                config('instagram.graph_base_url', 'https://graph.instagram.com'),
+                config('instagram.api.graph_base_url', 'https://graph.instagram.com'),
                 '', // Sin versión para este endpoint
-                (int) config('instagram.timeout', 30)
+                (int) config('instagram.api.timeout', 30)
             );
 
             return $exchangeClient->request(
@@ -345,7 +345,7 @@ class InstagramAccountService
                 null,
                 [
                     'grant_type' => 'ig_exchange_token',
-                    'client_secret' => config('instagram.client_secret'),
+                    'client_secret' => config('instagram.meta_auth.client_secret'),
                     'access_token' => $shortLivedToken,
                 ]
             );
@@ -395,9 +395,9 @@ class InstagramAccountService
 
             // Crear cliente para endpoint de refresh (según documentación)
             $refreshClient = new ApiClient(
-                config('instagram.graph_base_url', 'https://graph.instagram.com'),
+                config('instagram.api.graph_base_url', 'https://graph.instagram.com'),
                 '', // Sin versión para este endpoint
-                (int) config('instagram.timeout', 30)
+                (int) config('instagram.api.timeout', 30)
             );
 
             return $refreshClient->request(

@@ -152,7 +152,7 @@ class InstagramWebhookMessagesTest extends TestCase
         Log::channel('instagram')->info('🧪 TEST: Verificando validación de token válido');
 
         $challenge = 'test_challenge_' . uniqid();
-        $validToken = config('instagram.webhook_verify_token');
+        $validToken = config('instagram.webhook.verify_token');
 
         $response = $this->call('GET', route('instagram.webhook'), [
             'hub_mode' => 'subscribe',

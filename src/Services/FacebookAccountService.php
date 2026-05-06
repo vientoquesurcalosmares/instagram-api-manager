@@ -15,16 +15,16 @@ class FacebookAccountService
     public function __construct()
     {
         $this->apiClient = new ApiClient(
-            config('facebook.api_base_url'),
-            config('facebook.api_version'),
-            (int) config('facebook.timeout', 30)
+            config('facebook.api.base_url'),
+            config('facebook.api.version'),
+            (int) config('facebook.api.timeout', 30)
         );
     }
 
     public function getAuthorizationUrl(array $scopes = ['pages_show_list', 'pages_read_engagement', 'pages_messaging'], ?string $state = null): string
     {
-        $clientId = config('facebook.client_id');
-        $redirectUri = config('facebook.redirect_uri') ?: route('facebook.auth.callback');
+        $clientId = config('facebook.meta_auth.client_id');
+        $redirectUri = config('facebook.meta_auth.redirect_uri') ?: route('facebook.auth.callback');
         $state = $state ?? bin2hex(random_bytes(20));
 
         $params = http_build_query([
@@ -50,9 +50,9 @@ class FacebookAccountService
                 [],
                 null,
                 [
-                    'client_id' => config('facebook.client_id'),
-                    'client_secret' => config('facebook.client_secret'),
-                    'redirect_uri' => config('facebook.redirect_uri') ?: route('facebook.auth.callback'),
+                    'client_id' => config('facebook.meta_auth.client_id'),
+                    'client_secret' => config('facebook.meta_auth.client_secret'),
+                    'redirect_uri' => config('facebook.meta_auth.redirect_uri') ?: route('facebook.auth.callback'),
                     'code' => $code,
                 ]
             );

@@ -36,7 +36,7 @@ class InstagramWebhookController extends Controller
     {
         $challenge = $request->get('hub_challenge');
         $verifyToken = $request->get('hub_verify_token');
-        $expectedToken = config('instagram.webhook_verify_token');
+        $expectedToken = config('instagram.webhook.verify_token');
 
         if ($verifyToken === $expectedToken && $challenge) {
             Log::info('Instagram webhook verified successfully');
@@ -54,7 +54,7 @@ class InstagramWebhookController extends Controller
     protected function handleEvent(Request $request)
     {
         $data = $request->all();
-        
+
         Log::channel('instagram')->info('=== WEBHOOK DE INSTAGRAM RECIBIDO ===');
         Log::channel('instagram')->info('Datos brutos del webhook:', $data);
 
@@ -65,7 +65,7 @@ class InstagramWebhookController extends Controller
                     Log::channel('instagram')->info('Procesando entrada del webhook', [
                         'entry_id' => $entry['id'] ?? 'unknown'
                     ]);
-                    
+
                     // PROCESAR CADA MENSAJE EN LA ENTRADA
                     if (isset($entry['messaging']) && is_array($entry['messaging'])) {
                         foreach ($entry['messaging'] as $messaging) {
@@ -76,7 +76,7 @@ class InstagramWebhookController extends Controller
                                 'has_message' => isset($messaging['message']),
                                 'message_type' => $this->determineMessageType($messaging)
                             ]);
-                            
+
                             // AQUÍ SE PROCESA Y ALMACENA EN BD
                             $this->messageService->processWebhookMessage($messaging);
                         }
@@ -90,7 +90,7 @@ class InstagramWebhookController extends Controller
 
             Log::channel('instagram')->info('=== WEBHOOK PROCESADO EXITOSAMENTE ===');
             return response('EVENT_RECEIVED', 200);
-            
+
         } catch (\Exception $e) {
             Log::channel('instagram')->error('❌ ERROR PROCESANDO WEBHOOK:', [
                 'error' => $e->getMessage(),
